@@ -1,0 +1,99 @@
+#!/usr/bin/env python
+
+import argparse
+import os
+
+parser = argparse.ArgumentParser()
+parser.add_argument("node_type", nargs="?", default="cpu", help="Which type of node to submit job to: cpu/gpu")
+parser.add_argument("-t","--walltime", help="Run walltime")
+args = parser.parse_args()
+print("Please input run command:")
+if os.path.exists(os.environ["HOME"] + "/.last_cmd"):
+    with open(os.environ["HOME"] + "/.last_cmd") as f:    
+        last_cmd = f.read()
+    print(f"(Last command: \"{last_cmd}\")")
+cmd = input()
+if cmd == "":
+    cmd = last_cmd
+with open(os.environ["HOME"] + "/.last_cmd", "w") as f:
+    f.write(cmd)
+title = cmd.split()[-1].split("/")[-1].split(".")[0]
+   
+script = ["#!/bin/bash", f"#SBATCH --job-name={title}"]
+if args.node_type == "gpu":
+    if args.walltime is not None:
+        walltime = args.walltime
+    else:
+        walltime = "100:00:00"
+    nnode = 1
+    ngpu = 4
+    ncore = 8
+    gpu_type = "2080ti"
+    while True:
+        print("Job specification:\nName: %s\nWalltime: %s\nNumber of GPUs: %d\nNumber of nodes: %d\nNumber of cores: %d\nGPU type: %s\nJob command: \"%s\"\nAgree? (yes to accept, or input name/time/node/core/ngpu/type to adjust settings)" % (title, walltime, ngpu, nnode, ncore, gpu_type, cmd))
+        resp = input()
+        if resp.lower() in ["y", "yes"]:
+            break
+        elif resp == "name":
+            title = input("Please input name of the job:")
+        elif resp == "time":
+            walltime = input("Please input new walltime:")
+        elif resp == "node":
+            nnode = int(input("Please input new number of nodes:"))
+        elif resp == "core":
+            ncore = int(input("Please input new number of cores:"))
+        elif resp == "ngpu":
+            ngpu = int(input("Please input new number of GPU counts:"))
+        elif resp == "type":
+            gpu_type = input("Please input the GPU type you want (1080ti/2080ti/v100):")
+    script.append("#SBATCH --partition=es1")
+    script.append("#SBATCH -q condo_transformer")
+    script.append("#SBATCH -A lr_transformer")
+    script.append(f"#SBATCH -t {walltime}")
+    script.append(f"#SBATCH -N {nnode}")
+    script.append(f"#SBATCH --gres=gpu:{ngpu}")
+    script.append(f"#SBATCH -n {ncore}")
+    if gpu_type in ["1080ti", "2080ti", "v100"]:
+        script.append(f"#SBATCH -C es1_{gpu_type}")
+    script.append("")
+    script.append("module load python/3.7")
+    script.append("source activate tf")
+    script.append(cmd)
+elif args.node_type == "cpu":
+    if args.walltime is not None:
+        walltime = args.walltime
+    else:
+        walltime = "500:00:00"
+    nnode = 1
+    ncore = 40
+    while True:
+        print("Job specification:\nName: %s\nWalltime: %s\nNumber of nodes: %d\nNumber of cores: %d\nJob command: \"%s\"\nAgree? (yes to accept, or input name/time/node/core to adjust settings)" % (title, walltime, nnode, ncore, cmd))
+        resp = input()
+        if resp.lower() in ["y", "yes"]:
+            break
+        elif resp == "name":
+            title = input("Please input name of the job:") 
+        elif resp == "time":
+            walltime = input("Please input new walltime:")
+        elif resp == "node":
+            nnode = int(input("Please input new number of nodes:"))
+        elif resp == "core":
+            ncore = int(input("Please input new number of cores:"))
+    script.append("#SBATCH --partition=csd_lr6_192")
+    script.append("#SBATCH -q condo_ninjaone")
+    script.append("#SBATCH -A lr_ninjaone")
+    script.append(f"#SBATCH -t {walltime}")
+    script.append(f"#SBATCH -N {nnode}")
+    script.append(f"#SBATCH -n {ncore}")
+    script.append("")
+    script.append("module load python/3.7")
+    script.append("source activate tf")
+    script.append(cmd)
+
+with open("submit.sh", "w") as f:
+    f.write("\n".join(script))
+
+os.system("sbatch submit.sh")
+import time
+time.sleep(1.5)
+os.system("squeue -u " + os.environ["USER"])
