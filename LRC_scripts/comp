@@ -2,7 +2,7 @@
 
 if [ "$1" = "gpu" ]; then
 echo "Entering GPU computing node..."
-srun -A lr_transformer -p es1 -q condo_transformer -t 4:0:0 --gres=gpu:4 -n 8  -N 1 -C es1_2080ti  --pty bash
+srun -A lr_ninjaone -p es1 -q condo_ninjaone_es1 -t 4:0:0 --gres=gpu:4 -n 8  -N 1 -C es1_2080ti  --pty bash
 else
 echo "Entering NinjaOne computing node..."
 srun -A lr_ninjaone -p csd_lr6_192 -q condo_ninjaone -t 4:0:0 --pty bash

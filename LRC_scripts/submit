@@ -3,6 +3,8 @@
 import argparse
 import os
 
+extra_cmds = ["source activate tf", 'export DISPLAY=""']
+
 parser = argparse.ArgumentParser()
 parser.add_argument("node_type", nargs="?", default="cpu", help="Which type of node to submit job to: cpu/gpu")
 parser.add_argument("-t","--walltime", help="Run walltime")
@@ -24,7 +26,7 @@ if args.node_type == "gpu":
     if args.walltime is not None:
         walltime = args.walltime
     else:
-        walltime = "100:00:00"
+        walltime = "200:00:00"
     nnode = 1
     ngpu = 4
     ncore = 8
@@ -38,6 +40,8 @@ if args.node_type == "gpu":
             title = input("Please input name of the job:")
         elif resp == "time":
             walltime = input("Please input new walltime:")
+            if walltime.isdigit():
+                walltime += ":00:00" 
         elif resp == "node":
             nnode = int(input("Please input new number of nodes:"))
         elif resp == "core":
@@ -46,9 +50,11 @@ if args.node_type == "gpu":
             ngpu = int(input("Please input new number of GPU counts:"))
         elif resp == "type":
             gpu_type = input("Please input the GPU type you want (1080ti/2080ti/v100):")
+            if gpu_type == "v100":
+                ngpu = 2
     script.append("#SBATCH --partition=es1")
-    script.append("#SBATCH -q condo_transformer")
-    script.append("#SBATCH -A lr_transformer")
+    script.append("#SBATCH -q condo_ninjaone_es1")
+    script.append("#SBATCH -A lr_ninjaone")
     script.append(f"#SBATCH -t {walltime}")
     script.append(f"#SBATCH -N {nnode}")
     script.append(f"#SBATCH --gres=gpu:{ngpu}")
@@ -57,7 +63,7 @@ if args.node_type == "gpu":
         script.append(f"#SBATCH -C es1_{gpu_type}")
     script.append("")
     script.append("module load python/3.7")
-    script.append("source activate tf")
+    script.extend(extra_cmds)
     script.append(cmd)
 elif args.node_type == "cpu":
     if args.walltime is not None:
@@ -87,7 +93,7 @@ elif args.node_type == "cpu":
     script.append(f"#SBATCH -n {ncore}")
     script.append("")
     script.append("module load python/3.7")
-    script.append("source activate tf")
+    script.extend(extra_cmds)
     script.append(cmd)
 
 with open("submit.sh", "w") as f:
