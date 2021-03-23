@@ -3,12 +3,14 @@
 import argparse
 import os
 
-extra_cmds = ["source activate tf", 'export DISPLAY=""']
+extra_cmds = ["source activate tf2", 'export DISPLAY=""']
 
 parser = argparse.ArgumentParser()
 parser.add_argument("node_type", nargs="?", default="cpu", help="Which type of node to submit job to: cpu/gpu")
 parser.add_argument("-t","--walltime", help="Run walltime")
+parser.add_argument("-e", "--environment", help="Python environment", default="tf2")
 args = parser.parse_args()
+extra_cmds[0] = extra_cmds[0].replace("tf2", args.environment)
 print("Please input run command:")
 if os.path.exists(os.environ["HOME"] + "/.last_cmd"):
     with open(os.environ["HOME"] + "/.last_cmd") as f:    
@@ -21,7 +23,7 @@ with open(os.environ["HOME"] + "/.last_cmd", "w") as f:
     f.write(cmd)
 title = cmd.split()[-1].split("/")[-1].split(".")[0]
    
-script = ["#!/bin/bash", f"#SBATCH --job-name={title}"]
+script = ["#!/bin/bash"]
 if args.node_type == "gpu":
     if args.walltime is not None:
         walltime = args.walltime
@@ -52,6 +54,7 @@ if args.node_type == "gpu":
             gpu_type = input("Please input the GPU type you want (1080ti/2080ti/v100):")
             if gpu_type == "v100":
                 ngpu = 2
+    script.append(f"#SBATCH --job-name={title}")
     script.append("#SBATCH --partition=es1")
     script.append("#SBATCH -q condo_ninjaone_es1")
     script.append("#SBATCH -A lr_ninjaone")
@@ -85,6 +88,7 @@ elif args.node_type == "cpu":
             nnode = int(input("Please input new number of nodes:"))
         elif resp == "core":
             ncore = int(input("Please input new number of cores:"))
+    script.append(f"#SBATCH --job-name={title}")
     script.append("#SBATCH --partition=csd_lr6_192")
     script.append("#SBATCH -q condo_ninjaone")
     script.append("#SBATCH -A lr_ninjaone")
