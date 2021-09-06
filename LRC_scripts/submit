@@ -3,12 +3,12 @@
 import argparse
 import os
 
-extra_cmds = ["source activate tf2", 'export DISPLAY=""']
+extra_cmds = ["source activate torch", 'export DISPLAY=""']
 
 parser = argparse.ArgumentParser()
 parser.add_argument("node_type", nargs="?", default="cpu", help="Which type of node to submit job to: cpu/gpu")
 parser.add_argument("-t","--walltime", help="Run walltime")
-parser.add_argument("-e", "--environment", help="Python environment", default="tf2")
+parser.add_argument("-e", "--environment", help="Python environment", default="torch")
 args = parser.parse_args()
 extra_cmds[0] = extra_cmds[0].replace("tf2", args.environment)
 print("Please input run command:")
